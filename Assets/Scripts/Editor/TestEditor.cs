@@ -22,7 +22,8 @@ public class TestEditor : Editor
         base.OnInspectorGUI();
 
 
-        var menu = new GenericMenu();
+        var propertiesMenu = new GenericMenu();
+        var methodsMenu = new GenericMenu();
 
         var components = testInspector.obj.GetComponents<Component>();
 
@@ -55,7 +56,7 @@ public class TestEditor : Editor
         {
             foreach (var child in item.Value)
             {
-                menu.AddItem(new GUIContent($"{item.Key.Key}/{child.Name}"), false, () =>
+                propertiesMenu.AddItem(new GUIContent($"{item.Key.Key}/{child.Name}"), false, () =>
                 {
 
                     selectedProperty = child;
@@ -71,6 +72,8 @@ public class TestEditor : Editor
             {
 
                 ParameterInfo[] pars = child.GetParameters();
+
+                //TEST to check for methods with 0 parameters
                 if (pars.Length > 0)
                     continue;
 
@@ -81,7 +84,7 @@ public class TestEditor : Editor
 
                 }
 
-                menu.AddItem(new GUIContent($"{item.Key.Key}/{child.Name} | {paramsList}"), false, () =>
+                methodsMenu.AddItem(new GUIContent($"{item.Key.Key}/{child.Name} | {paramsList}"), false, () =>
                 {
                     var type = child.ReturnType;
 
@@ -93,15 +96,13 @@ public class TestEditor : Editor
         }
 
         if (GUILayout.Button("Properties"))
-            menu.ShowAsContext();
+            propertiesMenu.ShowAsContext();
 
         if (GUILayout.Button("Methods"))
-            menu.ShowAsContext();
+            methodsMenu.ShowAsContext();
 
         if (selectedProperty != null && selectedComponent != null)
         {
-            Debug.Log($"type {selectedProperty.PropertyType}");
-
             if (selectedProperty.PropertyType == typeof(UnityEngine.Vector3)) // is it possible to convert it to property field? somehow i doubt it
             {
                 var value = EditorGUILayout.Vector3Field(selectedProperty.Name, (Vector3)selectedProperty.GetValue(selectedComponent));
