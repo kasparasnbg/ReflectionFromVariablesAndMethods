@@ -6,6 +6,5 @@ using UnityEngine;
 public class TestInspector : MonoBehaviour
 {
     public GameObject obj;
-    public BindingFlags flags;
 
 }

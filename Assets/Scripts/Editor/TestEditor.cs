@@ -5,20 +5,18 @@ using UnityEditor;
 using UnityEngine;
 
 [CustomEditor(typeof(TestInspector))]
-
-
-
 public class TestEditor : Editor
 {
     TestInspector testInspector;
+    Component selectedComponent;
+    string selectedPropertyName;
+
     private void OnEnable()
     {
         testInspector = (TestInspector)target;
 
     }
 
-    Component selectedComponent;
-    PropertyInfo selectedProperty;
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
@@ -28,33 +26,37 @@ public class TestEditor : Editor
 
         var components = testInspector.obj.GetComponents<Component>();
 
-        Dictionary<KeyValuePair<string, Component>, List<PropertyInfo>> dropDownMenu = new Dictionary<KeyValuePair<string, Component>, List<PropertyInfo>>();
+        Dictionary<KeyValuePair<string, Component>, List<string>> dropDownMenu = new Dictionary<KeyValuePair<string, Component>, List<string>>();
 
 
         foreach (var component in components)
         {
-            dropDownMenu.Add(new KeyValuePair<string, Component>(component.GetType().Name, component), new List<PropertyInfo>());
-            //    menu.AddItem(new GUIContent(component.GetType().Name), false, () => { });
-        }
+            dropDownMenu.Add(new KeyValuePair<string, Component>(component.GetType().Name, component), new List<string>());
 
-        foreach (var component in components)
-        {
-            PropertyInfo[] properties = component.GetType().GetProperties();
             var key = new KeyValuePair<string, Component>(component.GetType().Name, component);
-            foreach (PropertyInfo property in properties)
+
+            SerializedObject serializedObject = new SerializedObject(component);
+            SerializedProperty sp = serializedObject.GetIterator();
+            var exists = sp.NextVisible(true);
+
+            while (exists)
             {
-                dropDownMenu[key].Add(property);
+                dropDownMenu[key].Add(sp.name);
+                exists = sp.NextVisible(false);
             }
+            
+
+
         }
+  
 
         foreach (var item in dropDownMenu)
         {
             foreach (var child in item.Value)
             {
-                menu.AddItem(new GUIContent($"{item.Key.Key}/{child.Name}"), false, () =>
+                menu.AddItem(new GUIContent($"{item.Key.Key}/{child}"), false, () =>
                 {
-
-                    selectedProperty = child;
+                    selectedPropertyName = child;
                     selectedComponent = item.Key.Value;
                 });
 
@@ -65,29 +67,14 @@ public class TestEditor : Editor
             menu.ShowAsContext();
 
 
-        if (selectedProperty != null && selectedComponent != null)
+        if (selectedComponent != null && !string.IsNullOrWhiteSpace(selectedPropertyName))
         {
-            Debug.Log($"type {selectedProperty.PropertyType}");
-
-            if (selectedProperty.PropertyType == typeof(UnityEngine.Vector3))
-            {
-                var value = EditorGUILayout.Vector3Field(selectedProperty.Name, (Vector3)selectedProperty.GetValue(selectedComponent));
-                selectedProperty.SetValue(selectedComponent, value);
-
-                //EditorGUILayout.PropertyField(serializedObject.FindProperty(selectedProperty.Name));
-            }
-
-
             SerializedObject serializedObject = new SerializedObject(selectedComponent);
 
-            var sp = serializedObject.GetIterator();
-
-            while (sp.Next(true))
-            {
-                Debug.Log(sp.name);
-            }
-            //EditorGUILayout.PropertyField(selectedProperty.PropertyType);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty(selectedPropertyName),true);
+            serializedObject.ApplyModifiedProperties();
         }
-    }
 
+
+    }
 }
