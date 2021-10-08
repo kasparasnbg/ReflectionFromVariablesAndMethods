@@ -6,8 +6,6 @@ using UnityEngine;
 
 [CustomEditor(typeof(TestInspector))]
 
-
-
 public class TestEditor : Editor
 {
     TestInspector testInspector;
@@ -28,13 +26,13 @@ public class TestEditor : Editor
 
         var components = testInspector.obj.GetComponents<Component>();
 
-        Dictionary<KeyValuePair<string, Component>, List<PropertyInfo>> dropDownMenu = new Dictionary<KeyValuePair<string, Component>, List<PropertyInfo>>();
-
+        Dictionary<KeyValuePair<string, Component>, List<PropertyInfo>> propertiesDropDownMenu = new Dictionary<KeyValuePair<string, Component>, List<PropertyInfo>>();
+        Dictionary<KeyValuePair<string, Component>, List<MethodInfo>> methodsDropDownMenu = new Dictionary<KeyValuePair<string, Component>, List<MethodInfo>>();
 
         foreach (var component in components)
         {
-            dropDownMenu.Add(new KeyValuePair<string, Component>(component.GetType().Name, component), new List<PropertyInfo>());
-            //    menu.AddItem(new GUIContent(component.GetType().Name), false, () => { });
+            propertiesDropDownMenu.Add(new KeyValuePair<string, Component>(component.GetType().Name, component), new List<PropertyInfo>());
+            methodsDropDownMenu.Add(new KeyValuePair<string, Component>(component.GetType().Name, component), new List<MethodInfo>());
         }
 
         foreach (var component in components)
@@ -43,11 +41,17 @@ public class TestEditor : Editor
             var key = new KeyValuePair<string, Component>(component.GetType().Name, component);
             foreach (PropertyInfo property in properties)
             {
-                dropDownMenu[key].Add(property);
+                propertiesDropDownMenu[key].Add(property);
+            }
+
+            MethodInfo[] methods = component.GetType().GetMethods();
+            foreach (MethodInfo methdod in methods)
+            {
+                methodsDropDownMenu[key].Add(methdod);
             }
         }
 
-        foreach (var item in dropDownMenu)
+        foreach (var item in propertiesDropDownMenu)
         {
             foreach (var child in item.Value)
             {
@@ -61,32 +65,49 @@ public class TestEditor : Editor
             }
         }
 
-        if (GUILayout.Button("show menu"))
+        foreach (var item in methodsDropDownMenu)
+        {
+            foreach (var child in item.Value)
+            {
+
+                ParameterInfo[] pars = child.GetParameters();
+                if (pars.Length > 0)
+                    continue;
+
+                string paramsList = "";
+                foreach (ParameterInfo p in pars)
+                {
+                    paramsList += p.ParameterType + " ";
+
+                }
+
+                menu.AddItem(new GUIContent($"{item.Key.Key}/{child.Name} | {paramsList}"), false, () =>
+                {
+                    var type = child.ReturnType;
+
+                    var result = child.Invoke(item.Key.Value, new object[] { });
+                    Debug.Log(result);//no clue how to unbox
+                });
+
+            }
+        }
+
+        if (GUILayout.Button("Properties"))
             menu.ShowAsContext();
 
+        if (GUILayout.Button("Methods"))
+            menu.ShowAsContext();
 
         if (selectedProperty != null && selectedComponent != null)
         {
             Debug.Log($"type {selectedProperty.PropertyType}");
 
-            if (selectedProperty.PropertyType == typeof(UnityEngine.Vector3))
+            if (selectedProperty.PropertyType == typeof(UnityEngine.Vector3)) // is it possible to convert it to property field? somehow i doubt it
             {
                 var value = EditorGUILayout.Vector3Field(selectedProperty.Name, (Vector3)selectedProperty.GetValue(selectedComponent));
                 selectedProperty.SetValue(selectedComponent, value);
-
-                //EditorGUILayout.PropertyField(serializedObject.FindProperty(selectedProperty.Name));
             }
 
-
-            SerializedObject serializedObject = new SerializedObject(selectedComponent);
-
-            var sp = serializedObject.GetIterator();
-
-            while (sp.Next(true))
-            {
-                Debug.Log(sp.name);
-            }
-            //EditorGUILayout.PropertyField(selectedProperty.PropertyType);
         }
     }
 
